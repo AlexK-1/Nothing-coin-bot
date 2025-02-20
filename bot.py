@@ -37,7 +37,7 @@ def excepthook(exc_type, exc_value, exc_tb):
 sys.excepthook = excepthook
 
 
-@bot.message_handler(commands=["start"])
+@bot.message_handler(commands=["start", "i", "init"])
 def start_command(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.username.lower()
@@ -200,10 +200,6 @@ def start_command(message: Message):
     /m /mine – проверяет введённоу в аргумент строку, если она начинается с определённой строки и её хеш содержит токен, ты получаешь {globals.mine_award} ничего, токен сбрасывается после каждого использования этой команды.""")
 
 
-def run():
+if __name__ == '__main__':
     logging.info("Bot started")
     bot.infinity_polling()
-
-
-if __name__ == '__main__':
-    run()

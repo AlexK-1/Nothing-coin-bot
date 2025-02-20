@@ -185,9 +185,5 @@ async def command_help(client: Client, message: Message):
 """, parse_mode=ParseMode.MARKDOWN)
 
 
-def run():
-    bot.run()
-
-
 if __name__ == '__main__':
-    run()
+    bot.run()
