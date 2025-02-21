@@ -36,8 +36,17 @@ def excepthook(exc_type, exc_value, exc_tb):
 
 sys.excepthook = excepthook
 
+commands = {
+    "init": ["start", "i", "init"],
+    "bal": ["count", "c", "bal", "b"],
+    "pay": ["p", "pay"],
+    "token": ["t", "token"],
+    "mine": ["m", "mine"],
+    "help": ["help", "h"]
+}
 
-@bot.message_handler(commands=["start", "i", "init"])
+
+@bot.message_handler(commands=commands["init"])
 def start_command(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.username.lower()
@@ -54,7 +63,7 @@ def start_command(message: Message):
                      f"пользователю или намайнить ещё ничего. Для большей информации введи команду /help")
 
 
-@bot.message_handler(commands=["count", "c", "bal", "b"])
+@bot.message_handler(commands=commands["bal"])
 def bal_command(message: Message):
     user_this_id = message.from_user.id
     args = message.text.split()[1:]
@@ -71,7 +80,7 @@ def bal_command(message: Message):
                          f"Твой текущий баланс: {user['bal']} ничего")
 
 
-@bot.message_handler(commands=["p", "pay"])
+@bot.message_handler(commands=commands["pay"])
 def command_pay(message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         args = message.text.split()[1:]
@@ -117,7 +126,7 @@ def command_pay(message: Message):
         logging.info(f"Pay {count} nothing from {user['id']} ({user['username']}) to {other_user['id']} ({other_user['username']})")
 
 
-@bot.message_handler(commands=["t", "token"])
+@bot.message_handler(commands=commands["token"])
 def command_token(message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         prefix = "nth" + str(user['id'])[:2] + str(user['id'])[-2:]
@@ -136,7 +145,7 @@ def command_token(message: Message):
                              parse_mode="MARKDOWN")
 
 
-@bot.message_handler(commands=["m", "mine"])
+@bot.message_handler(commands=commands["mine"])
 def mine_command(message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         args = message.text.split()[1:]
@@ -189,7 +198,7 @@ def mine_command(message: Message):
         logging.info(f"User {user['id']} ({user_name}) mined {globals.mine_award} nothing")
 
 
-@bot.message_handler(commands=["help", "h"])
+@bot.message_handler(commands=commands["help"])
 def start_command(message: Message):
     bot.send_message(message.chat.id,
                      f"""Перечень команд:
@@ -197,7 +206,52 @@ def start_command(message: Message):
     /b /bal – показывает твой баланс или баланс другого пользователя
     /p /pay – отдать какое-то количество ничего другому пользователю, первый аргумент – имя пользователя, второй – количестов ничего
     /t /token – создаёт новый или показывает уже созданный токен, который должен быть в хеше строки при выполнении команды mine
-    /m /mine – проверяет введённоу в аргумент строку, если она начинается с определённой строки и её хеш содержит токен, ты получаешь {globals.mine_award} ничего, токен сбрасывается после каждого использования этой команды.""")
+    /m /mine – проверяет введённоу в аргумент строку, если она начинается с определённой строки и её хеш содержит токен, ты получаешь {globals.mine_award} ничего, токен сбрасывается после каждого использования этой команды.
+
+Инструкция по майнингу.
+Майнинг ничего заключается в переборе случайных строк, которые начинаются с начальной строки, в хеше sha256 которой, преобразованном в base64 есть токен. Преобразование происходит по такой схеме:
+```
+base64(sha256(string))
+```
+
+Простейший майнер на Python:
+```python
+import hashlib
+import random
+import string
+import base64
+import time
+from multiprocessing import Process
+
+
+token = ""   # Вставь сюда токен
+prefix = ""  # Здесь твоя начальная строка
+symbols = string.ascii_letters + string.digits + string.punctuation
+
+
+def random_str(length: int):
+    return "".join([random.choice(string.ascii_lowercase + string.digits if i != 5 else string.ascii_uppercase) for i in range(length)])
+
+
+def mine():
+    i = 0
+    while True:
+        r_str = prefix + random_str(11)
+        bytes_hash = hashlib.sha256(r_str.encode()).digest()
+        str_hash = base64.b64encode(bytes_hash).decode()
+        if token.lower() in str_hash:
+            print(f"STRING: \\033[32m{{r_str}}\\033[0m HASH: {{str_hash}} ATTEMPT: {{i}}")
+            break
+        if i % 1_000_000 == 0 and i > 0:
+            print(f"ATTEMPTS: {{i}}")
+        i += 1
+
+if __name__ == '__main__':
+    mine()
+```
+
+Проект опенсурсный, вот его GitHub: https://github.com/AlexK-1/Nothing-coin-bot
+""", parse_mode="MARKDOWN")
 
 
 if __name__ == '__main__':

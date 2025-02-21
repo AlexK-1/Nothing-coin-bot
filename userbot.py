@@ -40,8 +40,17 @@ def excepthook(exc_type, exc_value, exc_tb):
 
 sys.excepthook = excepthook
 
+commands = {
+    "init": ["nth_i", "nth_init", "nothing_init"],
+    "bal": ["nth_c", "nth_count", "nothing_count", "nth_b", "nth_bal", "nothing_bal"],
+    "pay": ["nth_p", "nth_pay", "nothing_pay"],
+    "token": ["nth_t", "nth_token", "nothing_token"],
+    "mine": ["nth_m", "nth_mine", "nothing_mine"],
+    "help": ["nth_h", "nth_help", "nothing_help"]
+}
 
-@bot.on_message(filters.command(["nth_i", "nth_init", "nothing_init"], prefixes=">") & ~filters.forwarded)
+
+@bot.on_message(filters.command(commands["init"], prefixes=">") & ~filters.forwarded)
 async def command_init(client: Client, message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.username.lower()
@@ -56,7 +65,7 @@ async def command_init(client: Client, message: Message):
     logging.info(f"New user {user_id} ({user_name})")
 
 
-@bot.on_message(filters.command(["nth_c", "nth_count", "nothing_count", "nth_b", "nth_bal", "nothing_bal"], prefixes=">") & ~filters.forwarded)
+@bot.on_message(filters.command(commands["bal"], prefixes=">") & ~filters.forwarded)
 async def command_bal(client: Client, message: Message):
     user_this_id = message.from_user.id
     args = message.text.split()[1:]
@@ -71,7 +80,7 @@ async def command_bal(client: Client, message: Message):
         await message.reply(f"Твой текущий баланс: {user['bal']} ничего")
 
 
-@bot.on_message(filters.command(["nth_p", "nth_pay", "nothing_pay"], prefixes=">") & ~filters.forwarded)
+@bot.on_message(filters.command(commands["pay"], prefixes=">") & ~filters.forwarded)
 async def command_pay(client: Client, message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         args = message.text.split()[1:]
@@ -107,7 +116,7 @@ async def command_pay(client: Client, message: Message):
         logging.info(f"Pay {count} nothing from {user['id']} ({user['username']}) to {other_user['id']} ({other_user['username']})")
 
 
-@bot.on_message(filters.command(["nth_t", "nth_token", "nothing_token"], prefixes=">") & ~filters.forwarded)
+@bot.on_message(filters.command(commands["token"], prefixes=">") & ~filters.forwarded)
 async def command_token(client: Client, message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         prefix = "nth" + str(user['id'])[:2] + str(user['id'])[-2:]
@@ -124,7 +133,7 @@ async def command_token(client: Client, message: Message):
                                 parse_mode=ParseMode.MARKDOWN)
 
 
-@bot.on_message(filters.command(["nth_m", "nth_mine", "nothing_mine"], prefixes=">") & ~filters.forwarded)
+@bot.on_message(filters.command(commands["mine"], prefixes=">") & ~filters.forwarded)
 async def command_mine(client: Client, message: Message):
     if (user := db.get_user(id_=message.from_user.id)) is not None:
         args = message.text.split()[1:]
@@ -170,7 +179,7 @@ async def command_mine(client: Client, message: Message):
         logging.info(f"User {user['id']} ({user_name}) mined {globals.mine_award} nothing")
 
 
-@bot.on_message(filters.command(["nth_h", "nth_help", "nothing_help"], prefixes=">") & ~filters.forwarded)
+@bot.on_message(filters.command(commands["help"], prefixes=">") & ~filters.forwarded)
 async def command_help(client: Client, message: Message):
     await message.reply(f"""
 Храню и передаю ничего.
@@ -182,6 +191,50 @@ async def command_help(client: Client, message: Message):
     **nth_p**, **nth_pay**, **nothing_pay** - отдать какое-то количество ничего другому пользователю, первый аргумент – имя пользователя, второй – количестов ничего
     **nth_t**, **nth_token**, **nothing_token** - создаёт новый или показывает уже созданный токен, который должен быть в хеше строки при выполнении команды nth_mine
     **nth_m**, **nth_mine**, **nothing_mine** - проверяет введённоу в аргумент строку, если она начинается с определённой строки и её хеш содержит токен, ты получаешь {globals.mine_award} ничего, токен сбрасывается после каждого использования этой команды.
+
+Инструкция по майнингу.
+Майнинг ничего заключается в переборе случайных строк, которые начинаются с начальной строки, в хеше sha256 которой, преобразованном в base64 есть токен. Преобразование происходит по такой схеме:
+```
+base64(sha256(string))
+```
+
+Простейший майнер на Python:
+```python
+import hashlib
+import random
+import string
+import base64
+import time
+from multiprocessing import Process
+
+
+token = ""   # Вставь сюда токен
+prefix = ""  # Здесь твоя начальная строка
+symbols = string.ascii_letters + string.digits + string.punctuation
+
+
+def random_str(length: int):
+    return "".join([random.choice(string.ascii_lowercase + string.digits if i != 5 else string.ascii_uppercase) for i in range(length)])
+
+
+def mine():
+    i = 0
+    while True:
+        r_str = prefix + random_str(11)
+        bytes_hash = hashlib.sha256(r_str.encode()).digest()
+        str_hash = base64.b64encode(bytes_hash).decode()
+        if token.lower() in str_hash:
+            print(f"STRING: \\033[32m{{r_str}}\\033[0m HASH: {{str_hash}} ATTEMPT: {{i}}")
+            break
+        if i % 1_000_000 == 0 and i > 0:
+            print(f"ATTEMPTS: {{i}}")
+        i += 1
+
+if __name__ == '__main__':
+    mine()
+```
+
+Проект опенсурсный, вот его GitHub: https://github.com/AlexK-1/Nothing-coin-bot
 """, parse_mode=ParseMode.MARKDOWN)
 
 

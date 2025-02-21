@@ -6,5 +6,5 @@ venv
 *test*
 rows_count.py
 *.db
-*.session
+*.session*
 *log*
